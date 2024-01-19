@@ -1,0 +1,88 @@
+<html>
+<head>
+   <title>OPENCAM </title>
+</head>
+<body>
+   <h1>LOGIN</h1>
+   <br/>
+   <button id="startBtn" onclick="openCam()">Open Webcam</button>
+   <button id="stopBtn" onclick="vidOff()">Close Webcam</button>
+   <button id="captureBtn" onclick="capture()">Login</button>
+   <br/><br/>
+   <video id="videoCam"></video>
+</body>
+   <script>
+
+    var video;
+      function openCam(){
+         let All_mediaDevices=navigator.mediaDevices
+         if (!All_mediaDevices || !All_mediaDevices.getUserMedia) {
+            console.log("getUserMedia() not supported.");
+            return;
+         }
+         All_mediaDevices.getUserMedia({
+            video: true
+         })
+         .then(function(vidStream) {
+            video = document.getElementById('videoCam');
+            if ("srcObject" in video) {
+               video.srcObject = vidStream;
+            } else {
+               video.src = window.URL.createObjectURL(vidStream);
+            }
+            console.log(video, video.src, video.srcObject)
+            video.onloadedmetadata = function(e) {
+               video.play();
+            };
+         })
+         .catch(function(e) {
+            console.log(e.name + ": " + e.message);
+         });
+      }
+
+      function vidOff() {
+        video.pause();
+        video.src = "";
+        video.srcObject.getVideoTracks().forEach(track => track.enabled = false);
+        video.srcObject.getVideoTracks()[0].stop();
+    }
+
+    function capture() {
+        const videoCam = document.querySelector('#videoCam');
+        console.log(videoCam, video.width, video.height)
+        const cnv = window.canvas = document.createElement('canvas')
+        cnv.width = videoCam.videoWidth;
+        cnv.height = videoCam.videoHeight;
+        cnv.getContext('2d').drawImage(videoCam, 0,0, cnv.width, cnv.height);
+
+        cnv.toBlob((blob) => {
+            var formDataToUpload = new FormData();
+            formDataToUpload.append("image", blob);
+            var request = new XMLHttpRequest();
+            request.open("POST", "/main/login/");
+            request.send(formDataToUpload);
+
+            request.onreadystatechange = function() {
+                if (request.readyState == XMLHttpRequest.DONE) {
+                    console.log(request.responseText);
+                    if(request.responseText){
+                        let responseJSON = JSON.parse(request.responseText);
+                        if (responseJSON.status == 200) {
+                            if (responseJSON.match_status) alert('Match found')
+                            else alert('Match not found')
+                        }
+                        else if (responseJSON.status == 400) {
+                            window.location.href = '/main/error'
+                        }
+                    }
+                    else {
+                        console.log("Server did not respond")
+                    }
+                }
+            }
+        }); 
+        
+    }
+   </script>
+</body>
+</html>
